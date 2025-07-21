@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Multiple Expense Classification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        form {
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn-row {
+            text-align: center;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result-section {
+            margin-top: 30px;
+        }
+
+        .result-section h3 {
+            text-align: center;
+            color: #444;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+
+    <script>
+        function addRow() {
+            const table = document.getElementById("expenseTable");
+            const newRow = table.insertRow(-1);
+
+            const descCell = newRow.insertCell(0);
+            const amtCell = newRow.insertCell(1);
+
+            descCell.innerHTML = '<input type="text" name="text[]" required>';
+            amtCell.innerHTML = '<input type="number" step="0.01" name="amount[]" required>';
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>🧾 Multiple Expense Classification</h2>
+
+        <form method="POST">
+            {% csrf_token %}
+            <table id="expenseTable">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" name="text[]" required></td>
+                        <td><input type="number" step="0.01" name="amount[]" required></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="btn-row">
+                <button type="button" onclick="addRow()">➕ Add Row</button>
+                <button type="submit">🚀 Predict</button>
+            </div>
+        </form>
+
+        {% if results %}
+        <div class="result-section">
+            <h3>📊 Prediction Results:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount (₹)</th>
+                        <th>Predicted Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                    <tr>
+                        <td>{{ result.text }}</td>
+                        <td>₹{{ result.amount }}</td>
+                        <td>{{ result.prediction }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="back-link">
+            <a href="{% url 'classify_expense' %}">← Back to Single Prediction</a>
+        </div>
+    </div>
+</body>
+</html>

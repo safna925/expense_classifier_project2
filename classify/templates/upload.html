@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Upload CSV for Expense Classification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .back-btn {
+            display: block;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .back-btn a {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .back-btn a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📄 Upload CSV for Expense Classification</h2>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" name="csv_file" accept=".csv" required>
+            <br>
+            <button type="submit">Upload & Classify</button>
+        </form>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        {% if results %}
+            <h3>🔍 Classification Results:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Transaction</th>
+                        <th>Amount (₹)</th>
+                        <th>Predicted Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in results %}
+                    <tr>
+                        <td>{{ item.text }}</td>
+                        <td>
+                            {% if item.amount %}
+                                ₹{{ item.amount }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ item.prediction }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        <div class="back-btn">
+            <a href="{% url 'classify_expense' %}">← Go back to Single Prediction</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Expense Classifier{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">💼 Expense Classifier</h2>
+
+    <!-- Classification Form -->
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+
+        <!-- Description Input -->
+        <div class="mb-3">
+            <label for="text" class="form-label">Transaction Description</label>
+            <textarea name="text" id="text" class="form-control" rows="3"
+                      placeholder="e.g., Uber ride, Pizza delivery, Gas bill" required></textarea>
+        </div>
+
+        <!-- Amount Input -->
+        <div class="mb-3">
+            <label for="amount" class="form-label">Amount Spent (₹)</label>
+            <input type="number" name="amount" id="amount" class="form-control" step="0.01"
+                   placeholder="e.g., 250" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Classify</button>
+    </form>
+
+    <!-- Prediction History -->
+    {% if history %}
+        <hr>
+        <h4>🕒 Prediction History</h4>
+        <ul class="list-group mb-3">
+            {% for item in history %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><strong>{{ item.text }}</strong> → {{ item.prediction }}</span>
+                    <span class="badge bg-secondary">₹{{ item.amount }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Clear History Button -->
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" name="clear" class="btn btn-danger">🧹 Clear History</button>
+        </form>
+    {% endif %}
+
+    <!-- Links -->
+    <div class="text-center mt-4">
+        <a href="{% url 'upload_csv' %}" class="btn btn-outline-secondary me-2">📂 Upload CSV</a>
+        <a href="{% url 'dashboard' %}" class="btn btn-success me-2">📊 View Dashboard</a>
+        <a href="{% url 'download_pdf' %}" class="btn btn-outline-primary me-2">⬇️ Download Report (PDF)</a>
+        <a href="{% url 'multiple' %}" class="btn btn-dark mt-2">➕ Multiple Predictions</a>
+    </div>
+</div>
+{% endblock %}
