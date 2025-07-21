@@ -1,0 +1,36 @@
+# Python
+*.pyc
+__pycache__/
+
+# Environment
+env/
+venv/
+ENV/
+
+# VSCode settings
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database or migrations (optional)
+*.sqlite3
+db.sqlite3
+
+# Model/ML files
+*.pkl
+
+# Zip and temp files
+*.zip
+*.tar.gz
+*.rar
+
+# Jupyter/IPython
+.ipynb_checkpoints/
+
+# Pytest cache
+.pytest_cache/
