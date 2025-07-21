@@ -1,36 +1,15 @@
-# Python
-*.pyc
-__pycache__/
-
-# Environment
+# Ignore virtual environment
 env/
-venv/
-ENV/
 
-# VSCode settings
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore model and data
+expense_model.pkl
+transactions.csv
+
+# Ignore VS Code and OS files
 .vscode/
-
-# OS
-.DS_Store
+*.DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Database or migrations (optional)
-*.sqlite3
-db.sqlite3
-
-# Model/ML files
-*.pkl
-
-# Zip and temp files
-*.zip
-*.tar.gz
-*.rar
-
-# Jupyter/IPython
-.ipynb_checkpoints/
-
-# Pytest cache
-.pytest_cache/
