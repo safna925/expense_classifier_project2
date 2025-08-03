@@ -1,38 +1,40 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import make_pipeline
+from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 import joblib
 import os
 
-# ✅ Make sure 'classifier' directory exists for saving the model
-os.makedirs("classifier", exist_ok=True)
+# ✅ Ensure classifier directory exists
+os.makedirs("classify", exist_ok=True)
 
-# ✅ Load the dataset
-data = pd.read_csv("transactions.csv")  # Make sure this CSV exists with correct data
+# ✅ Load the improved dataset
+data = pd.read_csv("transactions.csv")
 
-# ✅ Features and labels
-X = data["text"]
-y = data["category"]
+X = data['text']
+y = data['category']
 
-# ✅ Stratified train-test split (preserves category distribution)
+# ✅ TF-IDF with bigrams and stop words removal
+vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words='english')
+X_vec = vectorizer.fit_transform(X)
+
+# ✅ Train-Test Split
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X_vec, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# ✅ Build the pipeline
-model = make_pipeline(TfidfVectorizer(), MultinomialNB())
-
-# ✅ Train the model
+# ✅ Train Linear SVC (better than Naive Bayes for text classification)
+model = LinearSVC()
 model.fit(X_train, y_train)
 
-# ✅ Predict on test set and calculate accuracy
+# ✅ Evaluate
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
-print(f"✅ Model accuracy: {accuracy * 100:.2f}%")
+print(f"✅ Model Accuracy: {accuracy * 100:.2f}%")
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
 
-# ✅ Save the model
-joblib.dump(model, "classifier/expense_model.pkl")
-print("✅ Model saved as classifier/expense_model.pkl")
+# ✅ Save both model and vectorizer
+joblib.dump(model, "classify/expense_model.pkl")
+joblib.dump(vectorizer, "classify/vectorizer.pkl")
+print("✅ Model and Vectorizer saved successfully!")

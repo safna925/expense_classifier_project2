@@ -13,8 +13,69 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
 
-# Load the trained model
-model = joblib.load("classifier/expense_model.pkl")
+# ✅ Load model and vectorizer
+model = joblib.load("classify/expense_model.pkl")
+vectorizer = joblib.load("classify/vectorizer.pkl")
+
+# ✅ Advanced Rule-based Correction with 50+ Keywords
+def correct_prediction(text, predicted_category):
+    t = text.lower()
+
+    keyword_rules = {
+        "Transportation": [
+            "car", "bus", "train", "uber", "ola", "taxi", "cab", "flight", "trip",
+            "petrol", "fuel", "diesel", "metro", "parking", "toll", "bike"
+        ],
+        "Education": [
+            "book", "textbook", "school", "college", "university", "course", "exam",
+            "study", "tuition", "library", "notebook", "pen", "stationery"
+        ],
+        "Insurance": [
+            "insurance", "premium", "policy", "coverage", "mediclaim"
+        ],
+        "Entertainment": [
+            "netflix", "spotify", "movie", "cinema", "concert", "game", "entertainment",
+            "theater", "ott", "music", "playstation", "xbox", "party"
+        ],
+        "Food": [
+            "biryani", "pizza", "burger", "restaurant", "lunch", "dinner", "snack",
+            "coffee", "sandwich", "breakfast", "cafe", "kfc", "mcdonald", "dominos",
+            "meal", "fries", "chicken"
+        ],
+        "Healthcare": [
+            "hospital", "doctor", "clinic", "medicine", "tablet", "pharmacy", "diagnostic",
+            "health", "checkup", "surgery", "covid", "vaccine", "dental", "eye"
+        ],
+        "Shopping": [
+            "amazon", "flipkart", "mall", "clothing", "shoes", "dress", "shirt", "pants",
+            "zara", "h&m", "nike", "adidas", "jewelry", "handbag", "watch", "electronics"
+        ],
+        "Groceries": [
+            "supermarket", "grocery", "vegetable", "fruit", "milk", "bread", "butter",
+            "rice", "dal", "bigbasket", "reliance fresh", "more supermarket", "dmart",
+            "oil", "flour", "egg"
+        ],
+        "Utilities": [
+            "electricity", "water", "gas", "internet", "wifi", "broadband", "mobile recharge",
+            "telephone", "power bill", "water bill", "sewage", "pipeline"
+        ],
+        "Charity": [
+            "donation", "charity", "ngo", "help", "relief", "fundraiser", "orphanage"
+        ],
+        "Rent": [
+            "rent", "lease", "apartment", "flat", "house rent", "room rent", "pg"
+        ],
+        "Travel": [
+            "hotel", "resort", "airbnb", "tour", "vacation", "holiday", "package", "travel"
+        ]
+    }
+
+    for category, keywords in keyword_rules.items():
+        if any(kw in t for kw in keywords):
+            return category
+
+    return predicted_category
+
 
 # --- Single Text Classification View ---
 def classify_expense(request):
@@ -28,7 +89,9 @@ def classify_expense(request):
             text = request.POST.get("text")
             amount = float(request.POST.get("amount", 0))
 
-            prediction = model.predict([text])[0]
+            X_vec = vectorizer.transform([text])
+            prediction = model.predict(X_vec)[0]
+            prediction = correct_prediction(text, prediction)
 
             history.append({"text": text, "prediction": prediction, "amount": amount})
             request.session["history"] = history
@@ -70,26 +133,25 @@ def upload_csv(request):
                     "error": "CSV must contain 'text' and 'amount' columns."
                 })
 
-            predictions = model.predict(df["text"])
+            X_vec = vectorizer.transform(df["text"])
+            preds = model.predict(X_vec)
 
             results = []
-            for text, pred, amt in zip(df["text"], predictions, df["amount"]):
+            for text, pred, amt in zip(df["text"], preds, df["amount"]):
                 try:
                     amt = float(amt)
                 except:
                     amt = 0.0
 
+                corrected_pred = correct_prediction(text, pred)
+
                 PredictionHistory.objects.create(
                     input_text=text,
-                    prediction=pred,
+                    prediction=corrected_pred,
                     amount=amt
                 )
 
-                results.append({
-                    "text": text,
-                    "prediction": pred,
-                    "amount": amt
-                })
+                results.append({"text": text, "prediction": corrected_pred, "amount": amt})
 
         except Exception as e:
             return render(request, "upload.html", {"error": f"Error reading CSV: {str(e)}"})
@@ -97,7 +159,7 @@ def upload_csv(request):
     return render(request, "upload.html", {"results": results})
 
 
-# --- Multiple Prediction View (Form-based without CSV) ---
+# --- Multiple Prediction View ---
 def multiple_prediction_view(request):
     predictions = []
 
@@ -106,25 +168,23 @@ def multiple_prediction_view(request):
         amounts = request.POST.getlist("amount[]")
 
         for text, amount in zip(descriptions, amounts):
-            if text.strip():  # Skip empty rows
+            if text.strip():
                 try:
                     amt = float(amount)
                 except:
                     amt = 0.0
 
-                prediction = model.predict([text])[0]
+                X_vec = vectorizer.transform([text])
+                pred = model.predict(X_vec)[0]
+                corrected_pred = correct_prediction(text, pred)
 
                 PredictionHistory.objects.create(
                     input_text=text,
-                    prediction=prediction,
+                    prediction=corrected_pred,
                     amount=amt
                 )
 
-                predictions.append({
-                    "text": text,
-                    "amount": amt,
-                    "prediction": prediction
-                })
+                predictions.append({"text": text, "amount": amt, "prediction": corrected_pred})
 
     return render(request, "multiple.html", {"results": predictions})
 
@@ -146,11 +206,7 @@ def dashboard(request):
 
     total_amount = sum(amount_data)
     total_predictions = history.count()
-    avg_per_category = {}
-    for cat in amount_per_category:
-        if count_per_category[cat] > 0:
-            avg_per_category[cat] = amount_per_category[cat] / count_per_category[cat]
-
+    avg_per_category = {cat: amount_per_category[cat]/count_per_category[cat] for cat in amount_per_category if count_per_category[cat] > 0}
     latest = history.first()
 
     context = {
