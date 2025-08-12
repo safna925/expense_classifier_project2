@@ -2,23 +2,38 @@ from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
 from django.utils.timezone import localtime, now
 from django.http import HttpResponse
+from django.conf import settings
 from .models import PredictionHistory
 from collections import defaultdict
 from django.db.models import Sum
 import pandas as pd
 import joblib
 import io
+import os
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
 
-# ✅ Load model and vectorizer
-model = joblib.load("classify/expense_model.pkl")
-vectorizer = joblib.load("classify/vectorizer.pkl")
+# ------------------------
+# Load Model & Vectorizer
+# ------------------------
+MODEL_PATH = os.path.join(settings.BASE_DIR, "classify", "expense_model.pkl")
+VECTORIZER_PATH = os.path.join(settings.BASE_DIR, "classify", "vectorizer.pkl")
 
-# ✅ Advanced Rule-based Correction with 50+ Keywords
+try:
+    model = joblib.load(MODEL_PATH)
+    vectorizer = joblib.load(VECTORIZER_PATH)
+except Exception as e:
+    model = None
+    vectorizer = None
+    print(f"❌ Error loading model/vectorizer: {e}")
+
+# ------------------------
+# Keyword-based Correction
+# ------------------------
 def correct_prediction(text, predicted_category):
+    """Rule-based keyword correction for categories."""
     t = text.lower()
 
     keyword_rules = {
@@ -76,8 +91,9 @@ def correct_prediction(text, predicted_category):
 
     return predicted_category
 
-
-# --- Single Text Classification View ---
+# ------------------------
+# Single Prediction View
+# ------------------------
 def classify_expense(request):
     history = request.session.get("history", [])
 
@@ -86,8 +102,11 @@ def classify_expense(request):
             request.session["history"] = []
             history = []
         else:
-            text = request.POST.get("text")
-            amount = float(request.POST.get("amount", 0))
+            text = request.POST.get("text", "").strip()
+            amount = float(request.POST.get("amount", 0) or 0)
+
+            if not text or not model or not vectorizer:
+                return render(request, "form.html", {"history": history, "error": "Model not loaded or text is empty."})
 
             X_vec = vectorizer.transform([text])
             prediction = model.predict(X_vec)[0]
@@ -110,16 +129,17 @@ def classify_expense(request):
 
     return render(request, "form.html", {"history": history})
 
-
-# --- Bulk CSV Upload View ---
+# ------------------------
+# Bulk CSV Upload View
+# ------------------------
 def upload_csv(request):
     results = None
 
     if request.method == "POST" and request.FILES.get("csv_file"):
         csv_file = request.FILES["csv_file"]
 
-        if not csv_file.name.endswith(".csv"):
-            return render(request, "upload.html", {"error": "File is not a CSV file."})
+        if not csv_file.name.lower().endswith(".csv"):
+            return render(request, "upload.html", {"error": "File must be a CSV."})
 
         fs = FileSystemStorage()
         filename = fs.save(csv_file.name, csv_file)
@@ -133,16 +153,15 @@ def upload_csv(request):
                     "error": "CSV must contain 'text' and 'amount' columns."
                 })
 
-            X_vec = vectorizer.transform(df["text"])
-            preds = model.predict(X_vec)
-
             results = []
-            for text, pred, amt in zip(df["text"], preds, df["amount"]):
+            for text, amt in zip(df["text"], df["amount"]):
                 try:
                     amt = float(amt)
                 except:
                     amt = 0.0
 
+                X_vec = vectorizer.transform([text])
+                pred = model.predict(X_vec)[0]
                 corrected_pred = correct_prediction(text, pred)
 
                 PredictionHistory.objects.create(
@@ -150,7 +169,6 @@ def upload_csv(request):
                     prediction=corrected_pred,
                     amount=amt
                 )
-
                 results.append({"text": text, "prediction": corrected_pred, "amount": amt})
 
         except Exception as e:
@@ -158,8 +176,9 @@ def upload_csv(request):
 
     return render(request, "upload.html", {"results": results})
 
-
-# --- Multiple Prediction View ---
+# ------------------------
+# Multiple Prediction View
+# ------------------------
 def multiple_prediction_view(request):
     predictions = []
 
@@ -183,13 +202,13 @@ def multiple_prediction_view(request):
                     prediction=corrected_pred,
                     amount=amt
                 )
-
                 predictions.append({"text": text, "amount": amt, "prediction": corrected_pred})
 
     return render(request, "multiple.html", {"results": predictions})
 
-
-# --- Dashboard View ---
+# ------------------------
+# Dashboard View
+# ------------------------
 def dashboard(request):
     history = PredictionHistory.objects.all().order_by('-timestamp')
     amount_per_category = defaultdict(float)
@@ -206,10 +225,13 @@ def dashboard(request):
 
     total_amount = sum(amount_data)
     total_predictions = history.count()
-    avg_per_category = {cat: amount_per_category[cat]/count_per_category[cat] for cat in amount_per_category if count_per_category[cat] > 0}
+    avg_per_category = {
+        cat: amount_per_category[cat] / count_per_category[cat]
+        for cat in amount_per_category if count_per_category[cat] > 0
+    }
     latest = history.first()
 
-    context = {
+    return render(request, 'dashboard.html', {
         'history': history,
         'categories': chart_labels,
         'amounts': amount_data,
@@ -222,11 +244,11 @@ def dashboard(request):
         'data': chart_data,
         'amount_labels': amount_labels,
         'amount_data': amount_data,
-    }
-    return render(request, 'dashboard.html', context)
+    })
 
-
-# --- PDF Download View ---
+# ------------------------
+# PDF Download View
+# ------------------------
 def download_pdf(request):
     history = PredictionHistory.objects.all().order_by('timestamp')
     total_predictions = history.count()

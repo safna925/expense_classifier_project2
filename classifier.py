@@ -1,40 +1,74 @@
+# classifier.py
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import LinearSVC
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
 import joblib
-import os
+import re
+import string
 
-# ✅ Ensure classifier directory exists
-os.makedirs("classify", exist_ok=True)
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score
 
-# ✅ Load the improved dataset
-data = pd.read_csv("transactions.csv")
+# ==========================
+# Step 1: Load the dataset
+# ==========================
+df = pd.read_csv("transactions.csv")
 
-X = data['text']
-y = data['category']
+# Ensure required columns exist
+required_cols = {"merchant", "description", "category"}
+if not required_cols.issubset(df.columns):
+    raise ValueError(f"CSV must contain columns: {required_cols}")
 
-# ✅ TF-IDF with bigrams and stop words removal
-vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words='english')
-X_vec = vectorizer.fit_transform(X)
+# ==========================
+# Step 2: Preprocessing function
+# ==========================
+def preprocess_text(text):
+    if pd.isnull(text):
+        return ""
+    # Lowercase
+    text = text.lower()
+    # Remove punctuation
+    text = text.translate(str.maketrans("", "", string.punctuation))
+    # Remove numbers
+    text = re.sub(r'\d+', '', text)
+    # Remove extra spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
-# ✅ Train-Test Split
-X_train, X_test, y_train, y_test = train_test_split(
-    X_vec, y, test_size=0.2, random_state=42, stratify=y
-)
+# Combine merchant and description for better context
+df["combined_text"] = (df["merchant"].astype(str) + " " + df["description"].astype(str)).apply(preprocess_text)
 
-# ✅ Train Linear SVC (better than Naive Bayes for text classification)
-model = LinearSVC()
-model.fit(X_train, y_train)
+# ==========================
+# Step 3: Split data
+# ==========================
+X = df["combined_text"]
+y = df["category"]
 
-# ✅ Evaluate
-y_pred = model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-print(f"✅ Model Accuracy: {accuracy * 100:.2f}%")
-print("\nClassification Report:\n", classification_report(y_test, y_pred))
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-# ✅ Save both model and vectorizer
-joblib.dump(model, "classify/expense_model.pkl")
-joblib.dump(vectorizer, "classify/vectorizer.pkl")
-print("✅ Model and Vectorizer saved successfully!")
+# ==========================
+# Step 4: Vectorization
+# ==========================
+vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=5000)
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
+
+# ==========================
+# Step 5: Train model
+# ==========================
+model = LogisticRegression(max_iter=500, solver="lbfgs", multi_class="auto", random_state=42)
+model.fit(X_train_tfidf, y_train)
+
+# ==========================
+# Step 6: Evaluate model
+# ==========================
+y_pred = model.predict(X_test_tfidf)
+print("\nModel Accuracy: {:.2f}%".format(accuracy_score(y_test, y_pred) * 100))
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred))
+
+# ==========================
+# Step 7: Save model + vectorizer
+# ==========================
+joblib.dump((model, vectorizer), "expense_model.pkl")
+print("\nModel saved as expense_model.pkl")

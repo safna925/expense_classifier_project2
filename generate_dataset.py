@@ -1,177 +1,122 @@
+# generate_dataset.py
 import pandas as pd
 import random
 
-# ✅ Categories with diverse, context-rich examples
-categories = {
-    "Food": [
-        "ordered dosa from hotel restaurant",
-        "masala dosa breakfast cafe",
-        "idli sambar tiffin center",
-        "pizza order from zomato",
-        "burger king order online",
-        "biryani lunch at hyderabad hotel",
-        "swiggy food delivery biryani",
-        "chicken curry dinner restaurant",
-        "dominos cheese burst pizza order",
-        "sandwich and coffee breakfast",
-        "pasta dinner restaurant",
-        "parotta and beef curry food",
-        "milkshake and fries fast food",
-        "seafood grill dinner restaurant",
-        "vegetarian thali restaurant",
-    ],
-    "Entertainment": [
-        "bookmyshow movie ticket booking",
-        "netflix subscription renewal",
-        "spotify premium monthly payment",
-        "concert rock music ticket",
-        "gaming subscription playstation plus",
-        "amazon prime ott streaming plan",
-        "music festival ticket purchase",
-        "xbox game store purchase",
-        "cinema hall ticket online booking",
-        "party night club entry fee",
-        "standup comedy live show ticket",
-        "online streaming disney hotstar plan",
+# Categories
+categories = [
+    "Charity", "Education", "Entertainment", "Food", "Groceries",
+    "Healthcare", "Insurance", "Rent", "Shopping", "Transportation",
+    "Travel", "Utilities"
+]
+
+# Category-specific, context-rich keywords (no dangerous overlaps)
+keywords = {
+    "Charity": [
+        "donation to ngo", "charity fundraiser event", "orphanage relief fund",
+        "ngo food supply", "flood relief charity drive", "animal shelter charity",
+        "environmental fundraiser", "charity for children"
     ],
     "Education": [
-        "engineering textbook amazon purchase",
-        "college tuition fee semester payment",
-        "online course udemy enrollment",
-        "exam registration fee for university",
-        "library annual membership payment",
-        "stationery purchase pen notebook",
-        "school annual fee submission",
-        "university lab practical charges",
-        "academic journal subscription",
-        "study material order for course",
-        "programming book python purchase",
-        "machine learning certification fee",
+        "college semester fee", "school annual tuition", "online coding course",
+        "university admission payment", "exam registration form fee",
+        "library membership renewal", "engineering workshop fee",
+        "language learning subscription"
     ],
-    "Travel": [
-        "book my trip holiday package goa",
-        "flight ticket airasia to bangalore",
-        "airbnb stay booking kerala",
-        "vacation tour package thailand",
-        "hotel reservation taj mahal stay",
-        "holiday travel package maldives",
-        "trip to singapore international",
-        "train ticket irctc express booking",
-        "cruise vacation booking",
-        "bus sleeper coach travel booking",
+    "Entertainment": [
+        "bookmyshow movie ticket", "live concert pass", "netflix annual subscription",
+        "spotify music plan", "standup comedy ticket", "amusement park entry pass",
+        "theatre drama booking", "video game purchase steam"
     ],
-    "Transportation": [
-        "ola cab ride airport",
-        "uber taxi office drop",
-        "bus ticket ksrtc travel",
-        "metro smart card recharge",
-        "petrol bunk fuel refill",
-        "bike parking fee mall",
-        "airport taxi prepaid service",
-        "car toll booth payment",
-        "diesel fuel station refill",
-        "train express sleeper reservation",
-        "parking charges city center",
-    ],
-    "Shopping": [
-        "amazon electronics mobile phone",
-        "flipkart clothing t-shirt purchase",
-        "mall shopping branded shoes",
-        "adidas sneakers sports shopping",
-        "nike sportswear online order",
-        "h&m dress fashion buy",
-        "zara handbag purchase online",
-        "gadget electronic item amazon",
-        "wrist watch shopping mall",
-        "jewelry gold chain purchase",
-        "smartwatch flipkart order",
+    "Food": [
+        "zomato chicken biryani", "restaurant dosa breakfast", "burger king combo meal",
+        "swiggy pizza delivery", "dominos cheese burst order",
+        "street food chaat payment", "cafe cappuccino order", "kfc crispy bucket meal"
     ],
     "Groceries": [
-        "dmart grocery shopping vegetables",
-        "bigbasket fruit vegetable home delivery",
-        "milk bread butter daily groceries",
-        "rice dal oil monthly stock",
-        "eggs sugar flour grocery bag",
-        "vegetable market fresh greens",
-        "reliance fresh fruit order online",
-        "more supermarket grocery cart",
-        "spices masala packet grocery",
-        "pulses and grains supermarket buy",
-        "onion tomato potato fresh buy",
+        "buy fresh vegetables", "bigbasket organic fruits", "milk bread eggs purchase",
+        "dmart monthly grocery shopping", "supermarket rice and dal",
+        "local market spinach and tomato", "more supermarket butter and cheese",
+        "organic store flour and oil"
     ],
     "Healthcare": [
-        "hospital doctor general consultation",
-        "pharmacy medicine tablet purchase",
-        "diagnostic blood test lab",
-        "eye clinic ophthalmology visit",
-        "dental cleaning root canal fee",
-        "covid vaccine booster dose",
-        "hospital surgery medical charges",
-        "tablet prescription medicine pharmacy",
-        "clinic doctor fee checkup",
-        "diagnostic xray scan test",
-        "emergency room visit charges",
+        "hospital surgery bill", "doctor specialist consultation",
+        "pharmacy antibiotic medicine", "eye hospital laser treatment",
+        "dental root canal payment", "medical lab blood test",
+        "orthopedic checkup visit", "covid vaccination center payment"
     ],
     "Insurance": [
-        "car insurance premium policy",
-        "health insurance renewal annual plan",
-        "life insurance coverage plan",
-        "travel insurance policy payment",
-        "home insurance plan renewal",
-        "mediclaim health coverage premium",
-        "policy term insurance payment",
-        "vehicle insurance annual fee",
-        "car accident coverage insurance",
-        "bike insurance policy premium",
+        "life insurance yearly premium", "car insurance renewal fee",
+        "health insurance claim settlement", "travel insurance package purchase",
+        "home insurance policy coverage", "bike insurance payment online",
+        "term insurance policy fee", "medical insurance plan renewal"
     ],
     "Rent": [
-        "apartment monthly rent payment",
-        "pg hostel room rent",
-        "house lease rental deposit",
-        "flat rent deposit monthly",
-        "office space rent coworking",
-        "room rent agreement signed",
-        "monthly house rental fee",
-        "apartment rental charges landlord",
-        "flat rental online transfer",
-        "home rent landlord payment",
+        "monthly apartment rent", "pg hostel room fee", "flat lease agreement payment",
+        "landlord rent deposit", "office space monthly rent", "shop rental payment",
+        "house rent cash payment", "villa rent for holiday month"
+    ],
+    "Shopping": [
+        "amazon electronics purchase", "flipkart clothing order",
+        "zara summer dress shopping", "nike sports shoes order",
+        "shopping mall handbag purchase", "h&m t-shirt pack order",
+        "adidas track pants buy", "apple store macbook purchase"
+    ],
+    "Transportation": [
+        "uber ride fare", "ola cab booking", "metro train ticket",
+        "petrol station fuel refill", "diesel car tank refill",
+        "bus pass monthly recharge", "bike taxi ride payment", "airport parking fee"
+    ],
+    "Travel": [
+        "international flight booking", "hotel resort stay",
+        "holiday tour package booking", "beach resort vacation stay",
+        "mountain trekking trip plan", "train reservation sleeper class",
+        "cruise ship vacation booking", "city travel sightseeing tour"
     ],
     "Utilities": [
-        "electricity kseb bill online",
-        "internet broadband recharge jiofiber",
-        "water bill pipeline supply",
-        "gas cylinder booking hp",
-        "wifi plan monthly recharge",
-        "mobile prepaid recharge jio",
-        "telephone landline bill bsnl",
-        "power electricity bill payment",
-        "sewage tax payment municipality",
-        "gas pipeline connection fee bharat",
-    ],
-    "Charity": [
-        "donation ngo children education",
-        "charity relief fund payment",
-        "fundraiser contribution cancer aid",
-        "orphanage child donation",
-        "ngo child welfare contribution",
-        "help flood victims donation",
-        "animal shelter dog food charity",
-        "charitable trust contribution medical aid",
-        "relief fund earthquake victims",
-        "ngo donation old age home",
+        "electricity bill payment online", "wifi broadband recharge",
+        "water pipeline usage bill", "cooking gas connection refill",
+        "mobile postpaid bill payment", "sewage service fee",
+        "landline telephone bill", "solar power maintenance payment"
     ]
 }
 
-# ✅ Generate 100 random variations per category
-rows = []
-for category, examples in categories.items():
-    for _ in range(100):
-        text = random.choice(examples)
-        rows.append({"text": text, "category": category})
+# Small percentage of ambiguous phrases with clear context words
+ambiguous_phrases = [
+    ("school trip bus ticket", ["Education", "Transportation"]),
+    ("charity food distribution event", ["Charity", "Food"]),
+    ("health insurance premium medical", ["Insurance", "Healthcare"]),
+    ("hotel dinner buffet", ["Travel", "Food"]),
+    ("movie night snacks order", ["Entertainment", "Food"]),
+    ("shopping mall grocery store", ["Shopping", "Groceries"])
+]
 
-# ✅ Create DataFrame and shuffle
-df = pd.DataFrame(rows).sample(frac=1, random_state=42).reset_index(drop=True)
+entries = []
+random.seed(42)
+total_entries = 10000
+entries_per_category = total_entries // len(categories)
 
-# ✅ Save final dataset
+for cat in categories:
+    count = 0
+    while count < entries_per_category:
+        if random.random() < 0.05:  # ~5% ambiguous data
+            phrase, possible_cats = random.choice(ambiguous_phrases)
+            assigned_cat = random.choice(possible_cats)
+        else:
+            phrase = random.choice(keywords[cat])
+            assigned_cat = cat
+
+        # Add small variations for robustness
+        if random.random() < 0.15:
+            phrase += " " + random.choice(["offer", "deal", "payment", "online", "order", "service", "booking"])
+
+        entries.append([phrase, assigned_cat])
+        count += 1
+
+# Shuffle dataset
+random.shuffle(entries)
+
+# Save dataset
+df = pd.DataFrame(entries, columns=["text", "category"])
 df.to_csv("transactions.csv", index=False)
-print("✅ Enhanced dataset 'transactions.csv' generated successfully with 1200 diverse entries!")
+
+print(f"✅ Dataset generated: {len(df)} entries, {len(categories)} categories, {entries_per_category} per category")
